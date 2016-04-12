@@ -210,3 +210,8 @@ FakesAssemblies/
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
+/CustomerAspNetIdentityEntityFramework/
+/Home/
+/IdentityServer3.EntityFramework/
+/IdentityServer3.Samples/
+/OpenXml/OpenXml.Utils/src/OpenXml.Utils/App.config
