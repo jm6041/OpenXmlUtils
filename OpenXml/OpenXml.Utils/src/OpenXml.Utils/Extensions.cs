@@ -18,7 +18,7 @@ namespace Skygp.OpenXml.Extensions
         /// OpenXml转换为<see cref="XDocument"/>对象
         /// </summary>
         /// <param name="part">OpenXml</param>
-        /// <returns></returns>
+        /// <returns><see cref="XDocument"/>对象</returns>
         public static XDocument GetXDocument(this OpenXmlPart part)
         {
             XDocument xdoc = part.Annotation<XDocument>();

@@ -16,7 +16,7 @@ namespace Skygp.Utils
         /// 是否为数字类型
         /// </summary>
         /// <param name="type">类型</param>
-        /// <returns></returns>
+        /// <returns>数字为true，否则为false</returns>
         public static bool IsNumericType(Type type)
         {
             if (type == null)
@@ -31,8 +31,8 @@ namespace Skygp.Utils
         /// <summary>
         /// 是否为数字类型编号
         /// </summary>
-        /// <param name="tc">TypeCode</param>
-        /// <returns></returns>
+        /// <param name="tc"><see cref="TypeCode"/></param>
+        /// <returns>数字为true，否则为false</returns>
         public static bool IsNumericTypeCode(TypeCode tc)
         {
 
@@ -58,8 +58,8 @@ namespace Skygp.Utils
         /// <summary>
         /// 获得TypeCode
         /// </summary>
-        /// <param name="type"></param>
-        /// <returns></returns>
+        /// <param name="type"><see cref="Type"/></param>
+        /// <returns><see cref="TypeCode"/></returns>
         public static TypeCode GetTypeCode(Type type)
         {
             if (type == null)

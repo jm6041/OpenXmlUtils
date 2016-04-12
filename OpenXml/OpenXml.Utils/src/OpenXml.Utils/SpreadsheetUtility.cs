@@ -231,26 +231,95 @@ namespace Skygp.OpenXml
             };
         }
 
+        /// <summary>
+        /// 属性信息
+        /// </summary>
         class PropertyDto
         {
-            public TypeCode TypeCodeValue { get; set; }
-            public string FormateText { get; set; }
-            public string BoolTrueText { get; set; }
-            public string BoolFalseText { get; set; }
-            // 样式索引，-1表示无样式索引
-            public int StyleIndex { get; set; } = -1;
+            private Type _type;
+            private TypeCode _typeCodeValue;
+            private CellValues _cellType;
+            private DisplayOpenXmlAttribute _displayOpenXmlAttr;
+
+            /// <summary>
+            /// 构造函数
+            /// </summary>
+            /// <param name="type">属性类型</param>
+            /// <param name="displayOpenXmlAttr"><see cref="DisplayOpenXmlAttribute"/></param>
+            public PropertyDto(Type type, DisplayOpenXmlAttribute displayOpenXmlAttr)
+            {
+                _type = type;
+                _typeCodeValue = TypeUtil.GetTypeCode(_type);
+                _cellType = GetCellValues(_typeCodeValue);
+                _displayOpenXmlAttr = displayOpenXmlAttr;
+            }
+
+            /// <summary>
+            /// 根据<see cref="TypeCode"/>获得<see cref="CellValues"/>
+            /// </summary>
+            /// <param name="tc"><see cref="TypeCode"/></param>
+            /// <returns><see cref="CellValues"/></returns>
+            private static CellValues GetCellValues(TypeCode tc)
+            {
+                CellValues cv = CellValues.String;
+                if (TypeUtil.IsNumericTypeCode(tc))
+                {
+                    cv = CellValues.Number;
+                }
+                return cv;
+            }
+
+            /// <summary>
+            /// 属性类型
+            /// </summary>
+            public Type PropertyType
+            {
+                get
+                {
+                    return _type;
+                }
+            }
+
+            /// <summary>
+            /// <see cref="TypeCode"/>
+            /// </summary>
+            public TypeCode TypeCodeValue
+            {
+                get
+                {
+                    return _typeCodeValue;
+                }
+            }
+
+            /// <summary>
+            /// <see cref="CellValues"/>
+            /// </summary>
             public CellValues CellType
             {
                 get
                 {
-                    CellValues cv = CellValues.String;
-                    if (TypeUtil.IsNumericTypeCode(TypeCodeValue))
-                    {
-                        return CellValues.Number;
-                    }
-                    return cv;
+                    return _cellType;
                 }
             }
+            
+            /// <summary>
+            /// <see cref="DisplayOpenXmlAttribute"/>
+            /// </summary>
+            public DisplayOpenXmlAttribute DisplayOpenXmlAttr
+            {
+                get
+                {
+                    return _displayOpenXmlAttr;
+                }
+            }
+            /// <summary>
+            /// 样式索引，-1表示无样式索引
+            /// </summary>
+            public int StyleIndex { get; set; } = -1;
+            /// <summary>
+            /// 列引用标记
+            /// </summary>
+            public string ColumnReference { get; set; }
         }
 
         class CellDto
@@ -310,36 +379,19 @@ namespace Skygp.OpenXml
         /// <summary>
         /// 确定属性信息
         /// </summary>
-        /// <param name="sheetData"></param>
-        /// <returns></returns>
+        /// <param name="sheetData"><see cref="SheetData"/>对象</param>
+        /// <returns><see cref="PropertyDto"/>对象数组</returns>
         private PropertyDto[] GetPropertyDtos(SheetData sheetData)
         {
             int pcount = propertyInfoes.Length;
-            int i = 0;
+            uint i = 0;
             PropertyDto[] pds = new PropertyDto[pcount];
             for (; i < pcount; i++)
             {
                 PropertyInfo pi = propertyInfoes[i];
-                PropertyDto pd = new PropertyDto();
-                pd.TypeCodeValue = TypeUtil.GetTypeCode(pi.PropertyType);
                 DisplayOpenXmlAttribute displayAtt = pi.GetCustomAttributes(typeof(DisplayOpenXmlAttribute), false).FirstOrDefault() as DisplayOpenXmlAttribute;
-                if (displayAtt != null)
-                {
-                    if (!string.IsNullOrEmpty(displayAtt.Formate))
-                    {
-                        pd.FormateText = displayAtt.Formate.Trim();
-                    }
-
-                    if (!string.IsNullOrEmpty(displayAtt.BoolTrueText))
-                    {
-                        pd.BoolTrueText = displayAtt.BoolTrueText;
-                    }
-
-                    if (!string.IsNullOrEmpty(displayAtt.BoolFalseText))
-                    {
-                        pd.BoolFalseText = displayAtt.BoolFalseText;
-                    }
-                }
+                PropertyDto pd = new PropertyDto(pi.PropertyType, displayAtt);
+                pd.ColumnReference = CellReferenceUtil.GetColumnReference(i);
                 pds[i] = pd;
             }
 
@@ -371,7 +423,7 @@ namespace Skygp.OpenXml
         /// <summary>
         /// 移除冗余的行
         /// </summary>
-        /// <param name="sheetData"></param>
+        /// <param name="sheetData"><see cref="SheetData"/>对象</param>
         private void RemoveRedundancyRows(SheetData sheetData)
         {
             uint ri = TemplateRowIndexContent;
@@ -390,8 +442,8 @@ namespace Skygp.OpenXml
         /// <summary>
         /// 添加内容部分
         /// </summary>
-        /// <param name="sheetData"></param>
-        /// <param name="pds">属性信息</param>
+        /// <param name="sheetData"><see cref="SheetData"/>对象</param>
+        /// <param name="pds"><see cref="PropertyDto"/>对象数组</param>
         private void AddBody(SheetData sheetData, PropertyDto[] pds)
         {
             // 是否新增文档
@@ -411,21 +463,22 @@ namespace Skygp.OpenXml
                     PropertyDto pd = pds[k];
                     object v = pi.GetValue(data, null);
                     string f = "{0}";
-                    if (!string.IsNullOrEmpty(pd.FormateText))
+                    if (pd.DisplayOpenXmlAttr != null && !string.IsNullOrEmpty(pd.DisplayOpenXmlAttr.Formate))
                     {
-                        f = "{0:" + pd.FormateText + "}";
+                        f = "{0:" + pd.DisplayOpenXmlAttr.Formate + "}";
                     }
                     string value = string.Format(f, v);
-                    if (pd.TypeCodeValue == TypeCode.Boolean && v != null && (!string.IsNullOrEmpty(pd.BoolTrueText) || !string.IsNullOrEmpty(pd.BoolFalseText)))
+                    if (pd.TypeCodeValue == TypeCode.Boolean && v != null &&
+                        (!string.IsNullOrEmpty(pd.DisplayOpenXmlAttr.BoolTrueText) || !string.IsNullOrEmpty(pd.DisplayOpenXmlAttr.BoolFalseText)))
                     {
                         bool bv = (bool)v;
-                        if (true == bv && !string.IsNullOrEmpty(pd.BoolTrueText))
+                        if (true == bv && !string.IsNullOrEmpty(pd.DisplayOpenXmlAttr.BoolTrueText))
                         {
-                            value = pd.BoolTrueText;
+                            value = pd.DisplayOpenXmlAttr.BoolTrueText;
                         }
-                        if (false == bv && !string.IsNullOrEmpty(pd.BoolFalseText))
+                        if (false == bv && !string.IsNullOrEmpty(pd.DisplayOpenXmlAttr.BoolFalseText))
                         {
-                            value = pd.BoolFalseText;
+                            value = pd.DisplayOpenXmlAttr.BoolFalseText;
                         }
                     }
 
@@ -436,7 +489,7 @@ namespace Skygp.OpenXml
                     }
                     else
                     {
-                        cell.CellReference = CellReferenceUtil.GetCellReference(rowIndex, k);
+                        cell.CellReference = string.Format("{0}{1}", pd.ColumnReference, rowIndex + 1);
                         if (pd.StyleIndex >= 0)
                         {
                             cell.StyleIndex = (uint)pd.StyleIndex;
@@ -456,8 +509,8 @@ namespace Skygp.OpenXml
         /// <summary>
         /// 添加数据
         /// </summary>
-        /// <param name="sheetData">SheetData对象，用于存储数据行</param>
-        /// <param name="worksheetPart">WorksheetPart对象</param>
+        /// <param name="sheetData"><see cref="SheetData"/>对象</param>
+        /// <param name="worksheetPart"><see cref="WorksheetPart"/>对象</param>
         protected void AddData(SheetData sheetData,WorksheetPart worksheetPart)
         {
             AddHead(sheetData);
@@ -470,9 +523,9 @@ namespace Skygp.OpenXml
         }
 
         /// <summary>
-        /// 确定MemoryStream不为空
+        /// 确定<see cref="MemoryStream"/>不为空
         /// </summary>
-        /// <param name="memoryStream"></param>
+        /// <param name="memoryStream"><see cref="MemoryStream"/>对象</param>
         private void MemoryStreamNotNull(MemoryStream memoryStream)
         {
             if (memoryStream == null)
@@ -559,7 +612,7 @@ namespace Skygp.OpenXml
         }
 
         /// <summary>
-        /// 是否生使用默认样式，整个表格添加边框，表头字体加粗
+        /// 是否生使用默认样式，整个表格添加边框，表头字体加粗，默认为true
         /// </summary>
         public bool UseDefalutStyle { get; set; } = true;
 
