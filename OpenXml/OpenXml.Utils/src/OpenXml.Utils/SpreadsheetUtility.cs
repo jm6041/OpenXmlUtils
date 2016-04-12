@@ -402,17 +402,20 @@ namespace Skygp.OpenXml
                 Row rl = sheetData.LastChild as Row;
                 if (rl != null)
                 {
-                    IEnumerable<Cell> cls = rl.Elements<Cell>();
+                    IEnumerable<Cell> cls = rl.Elements<Cell>().Where(x => false == string.IsNullOrEmpty(x.CellReference));
                     Dictionary<int, CellDto> dic = cls.Select(x => new CellDto(x.CellReference, x.StyleIndex)).ToDictionary(x => x.ColumnIndex);
-                    int j = 0;
-                    for (; j < pcount; j++)
+                    if (dic.Count() > 0)
                     {
-                        PropertyDto pd = pds[j];
-                        CellDto cd = null;
-                        bool s = dic.TryGetValue(j, out cd);
-                        if (true == s && cd != null)
+                        int j = 0;
+                        for (; j < pcount; j++)
                         {
-                            pd.StyleIndex = (int)cd.StyleIndex;
+                            PropertyDto pd = pds[j];
+                            CellDto cd = null;
+                            bool s = dic.TryGetValue(j, out cd);
+                            if (true == s && cd != null)
+                            {
+                                pd.StyleIndex = (int)cd.StyleIndex;
+                            }
                         }
                     }
                 }
@@ -612,7 +615,7 @@ namespace Skygp.OpenXml
         }
 
         /// <summary>
-        /// 是否生使用默认样式，整个表格添加边框，表头字体加粗，默认为true
+        /// 新生成文档时，是否生成并使用默认样式，默认为true（整个表格添加边框，表头字体加粗）
         /// </summary>
         public bool UseDefalutStyle { get; set; } = true;
 

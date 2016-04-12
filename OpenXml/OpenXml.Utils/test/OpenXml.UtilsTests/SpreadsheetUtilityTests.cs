@@ -3,6 +3,8 @@ using Skygp.OpenXml;
 using Skygp.OpenXml.Attributes;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -22,6 +24,24 @@ namespace Skygp.OpenXml.Tests
         {
             SpreadsheetUtility<Test> su = new SpreadsheetUtility<Test>(Test.GetDatas());
             su.Export("cc.xlsx");
+        }
+
+        [TestMethod()]
+        public void ExportTestUseTemplate()
+        {
+            try
+            {
+                SpreadsheetUtility<Test> su = new SpreadsheetUtility<Test>(Test.GetDatas());
+                su.TemplateFile = @"D:\GithubRep\OpenXml\OpenXml.Utils\test\OpenXml.UtilsTests\TestFile\PlanSapDataT.xlsx";
+                su.TemplateRowIndexContent = 1;
+                su.GenerateTableHead = false;
+                su.TemplateUseLastRowStyle = true;
+                su.Export("tt.xlsx");
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail(ex.Message);
+            }
         }
     }
 
